@@ -43,7 +43,6 @@ def _apply_defaults_to_session(d):
     st.session_state['self_term']   = str(d.get('self_term', ''))
     st.session_state['chebyshev']   = int(d.get('chebyshev', 0))
     st.session_state['pre_fitting'] = bool(d.get('pre_fitting', False))
-    st.session_state['chebyshev_fitting']              = bool(d.get('chebyshev_fitting', False))
     st.session_state['fit_with_instrument_resolution'] = bool(d.get('fit_with_instrument_resolution', False))
     st.session_state['broaden_data'] = bool(d.get('broaden_data', False))
 
@@ -147,10 +146,9 @@ nhermites = st.text_input('nhermites (integer or "default")',               key=
 
 with st.expander('Advanced options'):
     self_term = st.text_input('self_term (leave blank if none)',             key='self_term')
-    chebyshev = st.number_input('Chebyshev polynomial order (0 = off)',
+    chebyshev = st.number_input('Number of Chebyshev polynomials (0 = off)',
                                 min_value=0, step=1,                        key='chebyshev')
     pre_fitting = st.checkbox('pre_fitting',                                 key='pre_fitting')
-    cheb_fit    = st.checkbox('chebyshev_fitting',                           key='chebyshev_fitting')
     fit_res     = st.checkbox('fit_with_instrument_resolution',
                               key='fit_with_instrument_resolution')
     broaden     = st.checkbox('broaden_data',                                key='broaden_data')
@@ -168,7 +166,7 @@ params = {
     'self_term': self_term,
     'chebyshev': chebyshev,
     'pre_fitting':                    pre_fitting,
-    'chebyshev_fitting':              cheb_fit,
+    'chebyshev_fitting':              chebyshev > 0,
     'fit_with_instrument_resolution': fit_res,
     'broaden_data':                   broaden,
     # Not exposed in the form — carried through from defaults
