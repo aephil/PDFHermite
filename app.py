@@ -50,8 +50,8 @@ def _apply_defaults_to_session(d):
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(page_title='PDFHermite', layout='wide')
 st.title('PDFHermite')
+st.caption('Pair Distribution Function fitting via Hermite Functions')
 st.caption(
-    'Pair Distribution Function fitting via Hermite Functions · '
     'Wang, S., Gao, M., Qin, Y., Zhang, S., Tan, L. & Dove, M. T. (2025). '
     '[Accounting for instrument resolution in the pair distribution functions '
     'obtained from total scattering data using Hermite functions.]'
