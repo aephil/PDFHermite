@@ -1,8 +1,6 @@
 [theme]
-font = "Inter"
-
-# Uncomment and edit any of the following to customise colours:
-# primaryColor        = "#FF4B4B"   # accent colour (buttons, sliders, checkboxes)
-# backgroundColor     = "#FFFFFF"   # main panel background
-# secondaryBackgroundColor = "#F0F2F6"  # sidebar / widget background
-# textColor           = "#31333F"   # body text
+font                     = "Inter"
+primaryColor             = "#1B6CA8"   # deep sky blue — buttons, checkboxes, active widgets
+backgroundColor          = "#FFFFFF"   # pure white main panel
+secondaryBackgroundColor = "#F0F5FB"   # pale blue-grey for expanders / widget fields
+textColor                = "#1A2637"   # near-black with a cool tint, easier on the eye than pure black
