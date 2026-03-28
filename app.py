@@ -21,13 +21,17 @@ if PACKAGE_DIR not in sys.path:
 # once the .so is present.  On a fresh deployment the subprocess call runs
 # once (~5–10 s) before the page first renders.
 if not _glob.glob(os.path.join(PACKAGE_DIR, '_hermite_cext*.so')):
-    _subprocess.run(
+    _result = _subprocess.run(
         [sys.executable, 'setup_ext.py', 'build_ext', '--inplace'],
         cwd=PACKAGE_DIR,
         capture_output=True,
+        text=True,
         timeout=120,
         check=False,
     )
+    if _result.returncode != 0:
+        print('Hermite C extension build failed:', _result.stderr or _result.stdout,
+              file=sys.stderr)
 # ─────────────────────────────────────────────────────────────────────────────
 
 import streamlit as st
