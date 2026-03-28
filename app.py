@@ -123,10 +123,12 @@ else:
         key='data_uploads',
     )
 
-    dat_upload = st.file_uploader(
-        'Config .dat (optional — pre-fills parameters only)',
+    config_uploads = st.file_uploader(
+        'Config files (optional — .dat pre-fills parameters; '
+        'include resolution/broadening .txt files if referenced)',
         type=['dat', 'txt'],
-        key='dat_upload',
+        accept_multiple_files=True,
+        key='config_uploads',
     )
 
     # When data files change: auto-detect format and bank count
@@ -143,20 +145,39 @@ else:
             for key in ('res_type', 'brd_type'):
                 st.session_state.pop(key, None)
 
-    # When a .dat is uploaded: parse parameters only (not file metadata)
-    if dat_upload is not None:
-        dat_hash = hash(dat_upload.getvalue())
-        if st.session_state.get('_last_dat_hash') != dat_hash:
-            st.session_state['_last_dat_hash'] = dat_hash
+    # When config files change: parse .dat for parameters, .txt for resolution/broadening
+    if config_uploads:
+        cfg_hash = hash(b''.join(f.getvalue() for f in config_uploads))
+        if st.session_state.get('_last_cfg_hash') != cfg_hash:
+            st.session_state['_last_cfg_hash'] = cfg_hash
+            # Build a name→bytes map of all uploaded config files
+            cfg_map = {f.name: f.getvalue() for f in config_uploads}
+            # Identify the .dat (must contain '::')
+            dat_file = next(
+                (f for f in config_uploads
+                 if f.name.endswith('.dat')
+                 and b'::' in f.getvalue()),
+                None,
+            )
             try:
-                parsed = web_utils.defaults_from_bytes(dat_upload.getvalue(),
-                                                        dat_upload.name)
-                # Preserve data-file metadata derived from uploads
-                for preserve_key in ('_use_gudrun', '_nbanks', '_data_filenames'):
-                    parsed[preserve_key] = st.session_state.get(
-                        preserve_key, parsed.get(preserve_key))
-                st.session_state['_defaults'] = parsed
-                _apply_defaults_to_session(parsed)
+                if dat_file is not None:
+                    parsed = web_utils.defaults_from_bytes(dat_file.getvalue(),
+                                                            dat_file.name)
+                    # Resolve resolution/broadening files from the same upload set
+                    for info_key, file_key in [
+                        ('_resolution_info', 'resolution_information'),
+                        ('_broadening_info', 'broaden_information'),
+                    ]:
+                        fname = parsed.get(file_key, '').strip()
+                        if fname and fname in cfg_map:
+                            parsed[info_key] = web_utils.parse_resolution_bytes(
+                                cfg_map[fname])
+                    # Preserve data-file metadata derived from data uploads
+                    for preserve_key in ('_use_gudrun', '_nbanks', '_data_filenames'):
+                        parsed[preserve_key] = st.session_state.get(
+                            preserve_key, parsed.get(preserve_key))
+                    st.session_state['_defaults'] = parsed
+                    _apply_defaults_to_session(parsed)
             except Exception as exc:
                 st.warning(f'Could not parse config file: {exc}')
 

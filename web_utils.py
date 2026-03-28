@@ -320,6 +320,20 @@ def defaults_from_bytes(dat_bytes, dat_filename):
     return _config_to_defaults(config)
 
 
+def parse_resolution_bytes(file_bytes: bytes) -> dict:
+    """Parse a resolution/broadening .txt file supplied as raw bytes.
+
+    Returns an info dict ``{'type': str|None, 'params': […]}``.
+    """
+    tmp = tempfile.NamedTemporaryFile(suffix='.txt', delete=False)
+    try:
+        tmp.write(file_bytes)
+        tmp.close()
+        return _parse_resolution_txt(tmp.name)
+    finally:
+        os.unlink(tmp.name)
+
+
 def write_dat_from_params(dat_path, params):
     """Write a complete .dat config file to *dat_path* from a params dict."""
     lines = []
