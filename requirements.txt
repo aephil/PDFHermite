@@ -4,3 +4,4 @@ matplotlib
 streamlit>=1.35
 plotly>=5.20
 cython>=3.0
+setuptools
