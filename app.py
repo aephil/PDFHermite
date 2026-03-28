@@ -132,26 +132,26 @@ st.subheader('Parameters')
 col1, col2 = st.columns(2)
 
 with col1:
-    qfitmin = st.number_input('Qfitmin (Å⁻¹)', step=0.1,  format='%.2f', key='qfitmin')
-    rmax    = st.number_input('rmax (Å)',        step=1.0,  format='%.1f', key='rmax')
-    lorch   = st.checkbox('Lorch window',                                  key='lorch')
+    qfitmin = st.number_input('Minimum Q to fit (Å⁻¹)', step=0.1,  format='%.2f', key='qfitmin')
+    rmax    = st.number_input('Maximum r (Å)',            step=1.0,  format='%.1f', key='rmax')
+    lorch   = st.checkbox('Lorch window',                                           key='lorch')
 
 with col2:
-    qfitmax  = st.number_input('Qfitmax (Å⁻¹)', step=1.0,  format='%.1f',  key='qfitmax')
-    rspacing = st.number_input('rspacing (Å)',   step=0.005, format='%.4f', key='rspacing')
-    convolution = st.checkbox('Q-space convolution',                        key='convolution')
+    qfitmax  = st.number_input('Maximum Q to fit (Å⁻¹)', step=1.0,  format='%.1f',  key='qfitmax')
+    rspacing = st.number_input('r spacing (Å)',           step=0.005, format='%.4f', key='rspacing')
+    convolution = st.checkbox('Q-space convolution',                                 key='convolution')
 
-data_type = st.selectbox('data_type', _DT_OPTIONS, key='data_type')
-nhermites = st.text_input('nhermites (integer or "default")',               key='nhermites')
+data_type = st.selectbox('Input data type', _DT_OPTIONS, key='data_type')
+nhermites = st.text_input('Number of Hermite functions (or "default")',              key='nhermites')
 
 with st.expander('Advanced options'):
-    self_term = st.text_input('self_term (leave blank if none)',             key='self_term')
+    self_term = st.text_input('Self-scattering term (leave blank if none)',          key='self_term')
     chebyshev = st.number_input('Number of Chebyshev polynomials (0 = off)',
-                                min_value=0, step=1,                        key='chebyshev')
-    pre_fitting = st.checkbox('pre_fitting',                                 key='pre_fitting')
-    fit_res     = st.checkbox('fit_with_instrument_resolution',
+                                min_value=0, step=1,                                 key='chebyshev')
+    pre_fitting = st.checkbox('Chebyshev background pre-fitting',                    key='pre_fitting')
+    fit_res     = st.checkbox('Fit with instrument resolution',
                               key='fit_with_instrument_resolution')
-    broaden     = st.checkbox('broaden_data',                                key='broaden_data')
+    broaden     = st.checkbox('Broaden data',                                        key='broaden_data')
 
 # Bundle current form values + internal data-file metadata into one dict
 params = {
