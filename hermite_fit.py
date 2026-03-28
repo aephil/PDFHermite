@@ -147,7 +147,8 @@ def run(rootname):
     # -----------------------------------------------------------------------
     # Build Hermite function basis
     # -----------------------------------------------------------------------
-    print('Building Hermite basis...')
+    _backend = 'C extension' if functions._USE_C_HERMITE else 'Python (C extension not compiled)'
+    print(f'Building Hermite basis... [{_backend}]')
     xh = functions.build_hermite_basis(q, npts, nh, qp)
 
     # Save unbroadened copy for resolution comparison
