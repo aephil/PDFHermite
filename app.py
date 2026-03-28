@@ -175,7 +175,7 @@ params = {
     'self_term': self_term,
     'chebyshev': chebyshev,
     'pre_fitting':                    pre_fitting,
-    'chebyshev_fitting':              chebyshev > 0,
+    'chebyshev_fitting':              False,
     'fit_with_instrument_resolution': fit_res,
     'broaden_data':                   broaden,
     # Not exposed in the form — carried through from defaults
