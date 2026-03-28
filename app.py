@@ -69,8 +69,12 @@ if st.session_state.get('_last_input_mode') != input_mode:
 
 # ── Sample dataset selection ─────────────────────────────────────────────────
 if input_mode == 'Sample dataset':
-    selected_sample = st.selectbox('Dataset', web_utils.SAMPLE_DATASETS,
-                                   key='sample_select')
+    selected_sample = st.selectbox(
+        'Dataset', web_utils.SAMPLE_DATASETS,
+        index=web_utils.SAMPLE_DATASETS.index('silica'),
+        format_func=lambda k: web_utils.SAMPLE_DISPLAY_NAMES[k],
+        key='sample_select',
+    )
 
     if st.session_state.get('_last_sample') != selected_sample:
         st.session_state['_last_sample'] = selected_sample

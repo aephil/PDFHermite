@@ -24,9 +24,22 @@ import io_utils
 # ---------------------------------------------------------------------------
 
 SAMPLE_DATASETS = [
-    'ScF3_Gudrun', 'silica', 'Acetylene', 'Calcite',
-    'Cristobalite', 'Quartz', 'andalusite', 'Cu2P2O7', 'Fe2O3', 'SmB6',
+    'Acetylene', 'andalusite', 'Calcite', 'Cristobalite',
+    'Cu2P2O7', 'Fe2O3', 'Quartz', 'ScF3_Gudrun', 'silica', 'SmB6',
 ]
+
+SAMPLE_DISPLAY_NAMES = {
+    'Acetylene':    'Acetylene (C\u2082H\u2082)',
+    'andalusite':   'Andalusite (Al\u2082SiO\u2085)',
+    'Calcite':      'Calcite (CaCO\u2083)',
+    'Cristobalite': 'Cristobalite (SiO\u2082)',
+    'Cu2P2O7':      'Cu\u2082P\u2082O\u2087',
+    'Fe2O3':        'Fe\u2082O\u2083',
+    'Quartz':       'Quartz (SiO\u2082)',
+    'ScF3_Gudrun':  'ScF\u2083',
+    'silica':       'Silica (SiO\u2082)',
+    'SmB6':         'SmB\u2086',
+}
 
 DEFAULT_PARAMS = {
     'qfitmin': 0.5,
