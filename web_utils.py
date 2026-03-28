@@ -87,11 +87,15 @@ def detect_data_format(file_bytes: bytes) -> dict:
     """
     lines = file_bytes.decode('utf-8', errors='replace').splitlines()
     if sum(1 for ln in lines[:14] if ln.startswith('#')) >= 14:
+        # Require ≥5 columns (i.e. ≥2 banks) to confirm Gudrun multi-bank format.
+        # A 3-column file (Q, I, err) with 14 # headers is a plain data file
+        # that happens to use the same comment style — not a Gudrun DCS file.
         for ln in lines[14:]:
             parts = ln.split()
-            if len(parts) >= 3:
+            if len(parts) >= 5:
                 return {'format': 'gudrun', 'nbanks': (len(parts) - 1) // 2}
-        return {'format': 'gudrun', 'nbanks': 1}
+            elif len(parts) >= 2:
+                break   # first real data row has too few cols — plain file
     return {'format': 'plain', 'nbanks': 1}
 
 
