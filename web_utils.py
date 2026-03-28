@@ -62,7 +62,126 @@ DEFAULT_PARAMS = {
     '_data_filenames': [],
     '_use_gudrun': False,
     '_nbanks': 1,
+    '_resolution_info': {'type': None, 'params': []},
+    '_broadening_info': {'type': None, 'params': []},
 }
+
+# Resolution/broadening parameter names per type (mirrors functions.py _get_param logic)
+_RES_PARAMS = {
+    'gaussian':     ['sigma'],
+    'gaussian_tof': ['a', 'c'],
+    'pseudo_voigt': ['sigma', 'gamma', 'ratio'],
+    'back_to_back': ['sigma', 'gamma', 'ratio', 'lambda_up', 'lambda_down'],
+}
+
+# ---------------------------------------------------------------------------
+# Data-format detection
+# ---------------------------------------------------------------------------
+
+def detect_data_format(file_bytes: bytes) -> dict:
+    """Detect whether uploaded bytes are a Gudrun or plain data file.
+
+    Returns ``{'format': 'gudrun'|'plain', 'nbanks': int}``.
+    Gudrun files have ≥14 header lines beginning with ``#``; the bank count
+    is derived from the column count of the first data row: nbanks = (ncols-1)//2.
+    """
+    lines = file_bytes.decode('utf-8', errors='replace').splitlines()
+    if sum(1 for ln in lines[:14] if ln.startswith('#')) >= 14:
+        for ln in lines[14:]:
+            parts = ln.split()
+            if len(parts) >= 3:
+                return {'format': 'gudrun', 'nbanks': (len(parts) - 1) // 2}
+        return {'format': 'gudrun', 'nbanks': 1}
+    return {'format': 'plain', 'nbanks': 1}
+
+
+# ---------------------------------------------------------------------------
+# Resolution / broadening file helpers
+# ---------------------------------------------------------------------------
+
+def make_resolution_file(info: dict) -> str:
+    """Generate resolution/broadening .txt file content from an info dict.
+
+    *info* has the form ``{'type': str|None, 'params': [{'sigma': 0.06}, …]}``,
+    one dict per bank.  Returns an empty string if ``type`` is None/empty.
+    """
+    res_type = info.get('type') or ''
+    if not res_type:
+        return ''
+    lines = [f'resolution_type :: {res_type}']
+    banks = info.get('params', [])
+    nbanks = len(banks)
+    for key in _RES_PARAMS.get(res_type, []):
+        for ib, bparams in enumerate(banks):
+            val = bparams.get(key)
+            if val is None:
+                continue
+            suffix = str(ib + 1) if nbanks > 1 else ''
+            lines.append(f'{key}{suffix} :: {val}')
+    return '\n'.join(lines) + '\n'
+
+
+def _parse_resolution_txt(filepath: str) -> dict:
+    """Parse a resolution/broadening .txt file into an info dict.
+
+    Returns ``{'type': str|None, 'params': [{'sigma': 0.06}, …]}``.
+    """
+    cfg = io_utils.read_config(filepath)
+    res_type = cfg.get('resolution_type', '').lower()
+    if not res_type:
+        return {'type': None, 'params': []}
+
+    param_keys = _RES_PARAMS.get(res_type, [])
+    if not param_keys:
+        return {'type': res_type, 'params': []}
+
+    # Detect multi-bank by checking if indexed first-param key exists
+    first_key = param_keys[0]
+    if cfg.get(f'{first_key}1'):
+        ib = 1
+        while cfg.get(f'{first_key}{ib}'):
+            ib += 1
+        nbanks = ib - 1
+    else:
+        nbanks = 1
+
+    banks = []
+    for ib in range(nbanks):
+        d = {}
+        for pk in param_keys:
+            key = f'{pk}{ib + 1}' if nbanks > 1 else pk
+            raw = cfg.get(key, '')
+            if raw:
+                try:
+                    d[pk] = float(raw)
+                except ValueError:
+                    pass
+            elif pk == 'c':
+                d[pk] = 0.0   # c is optional in gaussian_tof; default 0
+        banks.append(d)
+
+    return {'type': res_type, 'params': banks}
+
+
+def _write_resolution_files(tmp_dir: str, params: dict) -> None:
+    """Write generated resolution/broadening .txt files to *tmp_dir*.
+
+    Mutates *params* in place: sets ``resolution_information`` and
+    ``broaden_information`` to the generated filenames (or '' if disabled).
+    """
+    for info_key, file_key, filename in [
+        ('_resolution_info', 'resolution_information', '_web_resolution.txt'),
+        ('_broadening_info', 'broaden_information',    '_web_broadening.txt'),
+    ]:
+        info = params.get(info_key, {'type': None, 'params': []})
+        content = make_resolution_file(info)
+        if content:
+            with open(os.path.join(tmp_dir, filename), 'w') as fh:
+                fh.write(content)
+            params[file_key] = filename
+        else:
+            params[file_key] = ''
+
 
 # ---------------------------------------------------------------------------
 # Config helpers
@@ -131,9 +250,29 @@ def _config_to_defaults(config):
 
 
 def load_sample_defaults(sample_name, package_dir):
-    """Parse a sample dataset's .dat file and return a defaults dict for the UI."""
-    dat_path = _find_dat_file(os.path.join(package_dir, sample_name))
-    return _config_to_defaults(io_utils.read_config(dat_path))
+    """Parse a sample dataset's .dat file and return a defaults dict for the UI.
+
+    Also parses any resolution/broadening .txt files referenced in the config
+    and stores the result under ``_resolution_info`` and ``_broadening_info``.
+    """
+    sample_dir = os.path.join(package_dir, sample_name)
+    dat_path = _find_dat_file(sample_dir)
+    d = _config_to_defaults(io_utils.read_config(dat_path))
+
+    for info_key, file_key in [
+        ('_resolution_info', 'resolution_information'),
+        ('_broadening_info', 'broaden_information'),
+    ]:
+        fname = d.get(file_key, '').strip()
+        if fname:
+            full_path = os.path.join(sample_dir, fname)
+            d[info_key] = (_parse_resolution_txt(full_path)
+                           if os.path.isfile(full_path)
+                           else {'type': None, 'params': []})
+        else:
+            d[info_key] = {'type': None, 'params': []}
+
+    return d
 
 
 def load_sample_files(sample_name, package_dir):
@@ -236,6 +375,9 @@ def write_dat_from_params(dat_path, params):
 def prepare_sample_run(sample_name, package_dir, params):
     """Copy a sample dataset directory to a fresh temp dir, write .dat from params.
 
+    Resolution/broadening files are regenerated from *params* (so UI edits
+    take effect) and written as ``_web_resolution.txt`` / ``_web_broadening.txt``.
+
     Returns the rootname (temp_dir/stem) suitable for hermite_fit.run().
     """
     sample_dir = os.path.join(package_dir, sample_name)
@@ -248,17 +390,21 @@ def prepare_sample_run(sample_name, package_dir, params):
         if os.path.isfile(src) and not name.startswith('._'):
             shutil.copy2(src, tmp)
 
+    params = params.copy()
+    _write_resolution_files(tmp, params)
     write_dat_from_params(os.path.join(tmp, stem + '.dat'), params)
     return os.path.join(tmp, stem)
 
 
-def prepare_upload_run(dat_name, upload_map, params):
+def prepare_upload_run(upload_map, params):
     """Write uploaded files to a fresh temp dir, write .dat from params.
+
+    Resolution/broadening files are generated from *params* if the respective
+    type is set; no separate resolution upload is needed.
 
     Parameters
     ----------
-    dat_name    : str   basename of the config file (used to derive the rootname)
-    upload_map  : dict  {filename: bytes} for all non-dat data/resolution files
+    upload_map  : dict  {filename: bytes} for data files
     params      : dict  current form parameters
 
     Returns the rootname for hermite_fit.run().
@@ -268,7 +414,11 @@ def prepare_upload_run(dat_name, upload_map, params):
         with open(os.path.join(tmp, fname), 'wb') as fh:
             fh.write(content)
 
-    stem = os.path.splitext(os.path.basename(dat_name))[0]
+    params = params.copy()
+    _write_resolution_files(tmp, params)
+
+    filenames = params.get('_data_filenames', [])
+    stem = os.path.splitext(filenames[0])[0] if filenames else 'run'
     write_dat_from_params(os.path.join(tmp, stem + '.dat'), params)
     return os.path.join(tmp, stem)
 

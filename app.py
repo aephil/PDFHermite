@@ -22,6 +22,16 @@ import web_utils
 _DT_OPTIONS = ['i(Q)', 'S(Q)', 'Qi(Q)']   # 'Qi(Q)' means already in Qi(Q) form (empty in config)
 
 
+def _apply_res_info_to_session(prefix, info):
+    """Pre-fill per-bank resolution widget keys from an info dict."""
+    res_type = info.get('type') or ''
+    if res_type:   # only set if valid; empty leaves widget at its own default
+        st.session_state[f'{prefix}_type'] = res_type
+    for ib, bparams in enumerate(info.get('params', [])):
+        for pk, val in bparams.items():
+            st.session_state[f'{prefix}_{pk}_{ib + 1}'] = float(val)
+
+
 def _apply_defaults_to_session(d):
     """Write a defaults dict directly into session state widget keys.
 
@@ -45,6 +55,9 @@ def _apply_defaults_to_session(d):
     st.session_state['pre_fitting'] = bool(d.get('pre_fitting', False))
     st.session_state['fit_with_instrument_resolution'] = bool(d.get('fit_with_instrument_resolution', False))
     st.session_state['broaden_data'] = bool(d.get('broaden_data', False))
+    st.session_state['_nbanks']     = int(d.get('_nbanks', 1))
+    _apply_res_info_to_session('res', d.get('_resolution_info', {'type': None, 'params': []}))
+    _apply_res_info_to_session('brd', d.get('_broadening_info', {'type': None, 'params': []}))
 
 
 # ── Page config ──────────────────────────────────────────────────────────────
@@ -104,39 +117,50 @@ if input_mode == 'Sample dataset':
 else:
     defaults = web_utils.DEFAULT_PARAMS.copy()
 
-    dat_upload = st.file_uploader('Config file (.dat)', type=['dat', 'txt'],
-                                  key='dat_upload')
     data_uploads = st.file_uploader(
-        'Data files (and any resolution / broadening files referenced in the config)',
+        'Data file(s) — Gudrun .dcs01 or plain two-column Q/I files',
         accept_multiple_files=True,
         key='data_uploads',
     )
 
+    dat_upload = st.file_uploader(
+        'Config .dat (optional — pre-fills parameters only)',
+        type=['dat', 'txt'],
+        key='dat_upload',
+    )
+
+    # When data files change: auto-detect format and bank count
+    if data_uploads:
+        data_hash = hash(b''.join(f.getvalue()[:200] for f in data_uploads))
+        if st.session_state.get('_last_data_hash') != data_hash:
+            st.session_state['_last_data_hash'] = data_hash
+            detected = web_utils.detect_data_format(data_uploads[0].getvalue())
+            st.session_state['_use_gudrun']  = detected['format'] == 'gudrun'
+            st.session_state['_nbanks']      = detected['nbanks']
+            st.session_state['_data_filenames'] = [f.name for f in data_uploads]
+            st.session_state.pop('run_results', None)
+            # Reset resolution/broadening widgets when file set changes
+            for key in ('res_type', 'brd_type'):
+                st.session_state.pop(key, None)
+
+    # When a .dat is uploaded: parse parameters only (not file metadata)
     if dat_upload is not None:
         dat_hash = hash(dat_upload.getvalue())
         if st.session_state.get('_last_dat_hash') != dat_hash:
             st.session_state['_last_dat_hash'] = dat_hash
             try:
-                defaults = web_utils.defaults_from_bytes(dat_upload.getvalue(),
-                                                          dat_upload.name)
-                st.session_state['_defaults'] = defaults
-                _apply_defaults_to_session(defaults)
+                parsed = web_utils.defaults_from_bytes(dat_upload.getvalue(),
+                                                        dat_upload.name)
+                # Preserve data-file metadata derived from uploads
+                for preserve_key in ('_use_gudrun', '_nbanks', '_data_filenames'):
+                    parsed[preserve_key] = st.session_state.get(
+                        preserve_key, parsed.get(preserve_key))
+                st.session_state['_defaults'] = parsed
+                _apply_defaults_to_session(parsed)
             except Exception as exc:
                 st.warning(f'Could not parse config file: {exc}')
 
-        defaults = st.session_state.get('_defaults', defaults)
-
-        # Tell the user which extra files are expected
-        expected = list(defaults.get('_data_filenames', []))
-        for key in ('resolution_information', 'broaden_information', 'pdf_file'):
-            v = defaults.get(key, '').strip()
-            if v:
-                expected.append(v)
-        if expected:
-            uploaded_names = {f.name for f in (data_uploads or [])}
-            missing = [f for f in expected if f not in uploaded_names]
-            if missing:
-                st.info(f"Also upload: {', '.join(missing)}")
+    defaults = st.session_state.get('_defaults', defaults)
 
 # ── Parameter form ────────────────────────────────────────────────────────────
 st.subheader('Parameters')
@@ -166,7 +190,58 @@ with st.expander('Advanced options'):
                               key='fit_with_instrument_resolution')
     broaden     = st.checkbox('Broaden data',                                        key='broaden_data')
 
+    nbanks_ui = st.session_state.get('_nbanks', 1)
+
+    def _res_param_inputs(prefix, res_type, nbanks):
+        """Render per-bank parameter inputs for a resolution/broadening type."""
+        param_keys = web_utils._RES_PARAMS.get(res_type, [])
+        for ib in range(nbanks):
+            label = f'Bank {ib + 1}' if nbanks > 1 else ''
+            if label:
+                st.caption(label)
+            cols = st.columns(len(param_keys))
+            for ic, pk in enumerate(param_keys):
+                hint = ' (optional)' if pk == 'c' else ''
+                cols[ic].number_input(
+                    f'{pk}{hint}',
+                    key=f'{prefix}_{pk}_{ib + 1}',
+                    value=0.0,
+                    format='%g',
+                    step=0.001,
+                )
+
+    _RES_TYPE_OPTIONS = list(web_utils._RES_PARAMS.keys())
+
+    if fit_res:
+        st.markdown('**Instrument resolution parameters**')
+        res_type_sel = st.selectbox('Resolution type', _RES_TYPE_OPTIONS,
+                                    key='res_type')
+        _res_param_inputs('res', res_type_sel, nbanks_ui)
+
+    if broaden:
+        st.markdown('**Data broadening parameters**')
+        brd_type_sel = st.selectbox('Broadening type', _RES_TYPE_OPTIONS,
+                                    key='brd_type')
+        _res_param_inputs('brd', brd_type_sel, nbanks_ui)
+
+def _collect_res_info(prefix, type_key, nbanks):
+    """Build a resolution info dict from session-state widget values."""
+    res_type = st.session_state.get(type_key, '')
+    if not res_type:
+        return {'type': None, 'params': []}
+    param_keys = web_utils._RES_PARAMS.get(res_type, [])
+    banks = []
+    for ib in range(nbanks):
+        d = {}
+        for pk in param_keys:
+            val = st.session_state.get(f'{prefix}_{pk}_{ib + 1}', 0.0)
+            d[pk] = val
+        banks.append(d)
+    return {'type': res_type, 'params': banks}
+
+
 # Bundle current form values + internal data-file metadata into one dict
+_nbanks_now = st.session_state.get('_nbanks', 1)
 params = {
     'qfitmin':   qfitmin,
     'qfitmax':   qfitmax,
@@ -182,22 +257,26 @@ params = {
     'chebyshev_fitting':              False,
     'fit_with_instrument_resolution': fit_res,
     'broaden_data':                   broaden,
+    # Resolution/broadening generated from form widgets
+    '_resolution_info': (_collect_res_info('res', 'res_type', _nbanks_now)
+                         if fit_res else {'type': None, 'params': []}),
+    '_broadening_info': (_collect_res_info('brd', 'brd_type', _nbanks_now)
+                         if broaden else {'type': None, 'params': []}),
     # Not exposed in the form — carried through from defaults
-    'resolution_information': defaults.get('resolution_information', ''),
-    'broaden_information':    defaults.get('broaden_information', ''),
-    'pdf_file':               defaults.get('pdf_file', ''),
-    '_data_filenames':        defaults.get('_data_filenames', []),
-    '_use_gudrun':            defaults.get('_use_gudrun', False),
-    '_nbanks':                defaults.get('_nbanks', 1),
+    'pdf_file':          defaults.get('pdf_file', ''),
+    '_data_filenames':   (st.session_state.get('_data_filenames', [])
+                          if input_mode == 'Upload files'
+                          else defaults.get('_data_filenames', [])),
+    '_use_gudrun':       (st.session_state.get('_use_gudrun', False)
+                          if input_mode == 'Upload files'
+                          else defaults.get('_use_gudrun', False)),
+    '_nbanks':           _nbanks_now,
 }
 
 # ── Run button ────────────────────────────────────────────────────────────────
 run_ready = True
 if input_mode == 'Upload files':
-    if dat_upload is None:
-        st.warning('Please upload a .dat config file.')
-        run_ready = False
-    elif not data_uploads:
+    if not data_uploads:
         st.warning('Please upload at least one data file.')
         run_ready = False
 
@@ -212,7 +291,7 @@ if run_ready and st.button('Run PDFHermite', type='primary'):
             rootname = web_utils.prepare_sample_run(selected_sample, PACKAGE_DIR, params)
         else:
             upload_map = {f.name: f.getvalue() for f in data_uploads}
-            rootname = web_utils.prepare_upload_run(dat_upload.name, upload_map, params)
+            rootname = web_utils.prepare_upload_run(upload_map, params)
 
         log_buf = _io.StringIO()
         with st.spinner('Running PDFHermite…'):
