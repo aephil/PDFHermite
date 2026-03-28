@@ -5,16 +5,32 @@ PDFHermite web interface — run with:
 """
 
 import contextlib
+import glob as _glob
 import io as _io
 import os
+import subprocess as _subprocess
 import sys
-
-import streamlit as st
 
 # Ensure the package directory is importable
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 if PACKAGE_DIR not in sys.path:
     sys.path.insert(0, PACKAGE_DIR)
+
+# ── Compile C extension if not already built ─────────────────────────────────
+# Runs on every Streamlit script execution; the glob check is a fast no-op
+# once the .so is present.  On a fresh deployment the subprocess call runs
+# once (~5–10 s) before the page first renders.
+if not _glob.glob(os.path.join(PACKAGE_DIR, '_hermite_cext*.so')):
+    _subprocess.run(
+        [sys.executable, 'setup_ext.py', 'build_ext', '--inplace'],
+        cwd=PACKAGE_DIR,
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+# ─────────────────────────────────────────────────────────────────────────────
+
+import streamlit as st
 
 import hermite_fit
 import web_utils
