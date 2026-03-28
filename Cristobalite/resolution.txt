@@ -1,0 +1,6 @@
+resolution_type :: back_to_back
+sigma :: 0.022
+gamma :: 0.029
+ratio :: 0.9
+lambda_up :: 0.5
+lambda_down :: 2

@@ -1,0 +1,4 @@
+resolution_type :: gaussian
+sigma :: 0.02
+
+

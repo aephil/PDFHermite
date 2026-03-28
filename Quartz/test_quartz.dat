@@ -1,0 +1,17 @@
+Qfitmax :: 50.0
+Qfitmin :: 0.5
+convolution :: true
+rmax :: 50.0
+Lorch :: true
+data_type :: 
+nhermites :: default
+self_term :: 
+Rspacing :: 0.01
+PDF_file :: quartz.dr
+Data_files :: 1
+1 quartz.qiq
+fit_with_instrument_resolution :: true
+broaden_data :: true
+resolution_information :: resolution.txt
+broaden_information :: broaden.txt
+print_graphs :: false

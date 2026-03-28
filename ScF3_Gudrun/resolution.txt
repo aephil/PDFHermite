@@ -1,0 +1,8 @@
+resolution_type :: gaussian_tof
+a1 :: 0.0212
+a2 :: 0.01
+a3 :: 0.0053
+a4 :: 0.003
+a5 :: 0.0012
+
+

@@ -1,0 +1,18 @@
+Qfitmax ::  35.0
+Qfitmin ::   0.5
+convolution :: true
+rmax :: 100
+Lorch :: true
+pre_fitting :: true
+chebyshev_fitting :: false
+chebyshev :: 8
+data_type :: i(Q)
+nhermites :: default
+self_term :: 
+Rspacing :: 0.01
+PDF_file :: 
+Data_files :: 1
+1 i15-1-12976_tth_det1_0.int01
+fit_with_instrument_resolution :: true
+resolution_information :: resolution.txt
+print_graphs :: false

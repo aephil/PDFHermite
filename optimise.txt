@@ -1,0 +1,30 @@
+Changes to the Hermite function calculation
+============================================
+
+The MATLAB code evaluates each Hermite function order separately using a
+backward Clenshaw recurrence (fockstate).  To build the full basis of nh
+functions this recurrence is called nh times, and each call runs a loop of
+roughly 2*nh iterations, giving an overall cost of O(nh^2).  For the
+default nhermites ~ 1000 this was very slow (~2 minutes on a typical machine).
+
+The Python port replaces this with a single forward pass through the 3-term
+recurrence relation
+
+    F_{n+1}(x) = sqrt(2/(n+1)) * x * F_n(x) - sqrt(n/(n+1)) * F_{n-1}(x)
+
+starting from F_0 = pi^(-1/4) * exp(-x^2/2) and F_1 = sqrt(2) * x * F_0.
+Because only odd-order functions are used in the fit (F_1, F_3, ...,
+F_{2*nh-1}), a single sweep of 2*nh-2 steps produces all nh required
+columns simultaneously, reducing the cost to O(nh).
+
+A second problem with the naive forward recurrence is numerical underflow:
+the Gaussian envelope exp(-x^2/2) in F_n drives the values to zero for
+x = Q/qp beyond about 27, which affects high-Q detector banks and makes
+the design matrix rank-deficient.  To avoid this, the recurrence is carried
+out on the unscaled quantity G_n = F_n * exp(x^2/2) / pi^(-1/4), whose
+initial conditions (G_0 = 1, G_1 = sqrt(2)*x) do not decay.  Each G_n is
+stored as a (mantissa, binary_exponent) pair using numpy's frexp/exp2, so
+that even the exponentially large intermediate values are represented exactly.
+The physical Hermite function is recovered at the end as
+
+    F_n(x) = G_n_mantissa * 2^(G_n_exponent - x^2/(2*log(2))) * pi^(-1/4)

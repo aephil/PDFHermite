@@ -1,0 +1,18 @@
+Qfitmax :: 50
+Qfitmin ::  0.5
+convolution :: true
+rmax :: 80
+Lorch :: true
+pre_fitting :: true
+chebyshev_fitting :: false
+chebyshev :: 8
+data_type :: i(Q)
+nhermites :: default
+self_term :: 0.7032
+Rspacing :: 0.02
+PDF_file :: 
+Gudrun_files :: 5
+POL75948.dcs01
+fit_with_instrument_resolution :: true
+resolution_information :: resolution.txt
+print_graphs :: false

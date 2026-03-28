@@ -1,0 +1,20 @@
+Qfitmax ::  50
+Qfitmin ::   0.5
+convolution :: true
+rmax :: 50.0
+Lorch :: true
+pre_fitting :: true
+chebyshev_fitting :: false
+chebyshev :: 8
+data_type :: i(Q)
+nhermites :: default
+self_term :: 
+Rspacing :: 0.01
+PDF_file :: 
+Data_files :: 4
+1 glass_bank1.dat
+2 glass_bank2.dat
+3 glass_bank3.dat
+4 glass_bank4.dat
+fit_with_instrument_resolution :: false
+print_graphs :: false

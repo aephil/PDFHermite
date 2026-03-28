@@ -1,0 +1,22 @@
+Qfitmax :: 50
+Qfitmin :: 0.5
+convolution :: true
+rmax :: 25
+Lorch :: true
+pre_fitting :: true
+chebyshev_fitting :: false
+chebyshev :: 8
+data_type :: i(Q)
+nhermites :: default
+self_term :: 
+Rspacing :: 0.01
+PDF_file :: 
+Data_files :: 5
+1 iQ_bank2_10k.txt
+2 iQ_bank3_10k.txt
+3 iQ_bank4_10k.txt
+4 iQ_bank5_10k.txt
+5 iQ_bank6_10k.txt
+fit_with_instrument_resolution :: true
+resolution_information :: resolution.txt
+print_graphs :: false

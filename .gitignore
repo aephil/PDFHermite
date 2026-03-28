@@ -1,0 +1,34 @@
+# MATLAB source and binaries
+*.m
+*.mexmaci64
+*.mex*
+
+# Claude Code project files
+CLAUDE.md
+
+# Generated output files
+**/*.drout
+**/*.qiqout
+**/*.pdf
+
+# Cython-generated C/C++ translation units
+_hermite_cext.c
+_hermite_cext.cpp
+
+# Compiled Python extension
+*.so
+*.pyd
+
+# Build artefacts
+build/
+dist/
+*.egg-info/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS metadata
+.DS_Store
+._*
