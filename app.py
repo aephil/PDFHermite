@@ -146,6 +146,8 @@ nhermites = st.text_input('Number of Hermite functions (or "default")',         
 
 with st.expander('Advanced options'):
     self_term = st.text_input('Self-scattering term (leave blank if none)',          key='self_term')
+    st.caption(r'Expected value of $S(Q \rightarrow 0) = \sum_j c_j \bar{b_j^2}$, '
+               r'required for the conversion from S(Q) to i(Q).')
     chebyshev = st.number_input('Number of Chebyshev polynomials (0 = off)',
                                 min_value=0, step=1,                                 key='chebyshev')
     pre_fitting = st.checkbox('Chebyshev background pre-fitting',                    key='pre_fitting')
